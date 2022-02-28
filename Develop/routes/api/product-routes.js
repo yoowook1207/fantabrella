@@ -5,12 +5,46 @@ const { Product, Category, Tag, ProductTag } = require('../../models');
 
 // get all products
 router.get('/', (req, res) => {
-  // find all products
+  Product.findAll({
+    include: [
+      {
+        model: Category,
+        attributes: ['category_name']
+      },
+      {
+        model: Tag,
+        attributes: ['tag_name']
+      }
+    ]
+  })
+  .then(dbCategoryData => res.json(dbCategoryData)).catch(err =>{
+    console.log(err);
+    res.status(500).json(err)
+  })
   // be sure to include its associated Category and Tag data
 });
 
 // get one product
 router.get('/:id', (req, res) => {
+  Product.findOne({
+    where:{
+      id: req.params.id
+    },
+    include: [
+      {
+        model: Category,
+        attributes: ['category_name']
+      },
+      {
+        model: Tag,
+        attributes: ['tag_name']
+      }
+    ]
+  })
+  .then(dbCategoryData => res.json(dbCategoryData)).catch(err =>{
+    console.log(err);
+    res.status(500).json(err)
+  })
   // find a single product by its `id`
   // be sure to include its associated Category and Tag data
 });
@@ -90,7 +124,31 @@ router.put('/:id', (req, res) => {
 });
 
 router.delete('/:id', (req, res) => {
-  // delete one product by its `id` value
+  ProductTag.findAll({ where: { product_id: req.params.id } })
+  .then((productTags) => {
+      const productTagIds = productTags.map(({ tag_id }) => tag_id);
+      const productTagsToRemove = productTags
+      .filter(({ tag_id }) => productTagIds.includes(tag_id))
+      .map(({ id }) => id);
+    return Promise.all([
+      ProductTag.destroy({ where: { id: productTagsToRemove } }),
+    ]);
+  })
+  .then((deleteProductTags) => res.json(deleteProductTags))
+  .catch((err) => {
+    res.status(400).json(err);
+  });
+  
+  Product.destroy({
+    where: {
+      id: req.params.id
+    }
+  })
+  .then((deleteProductTags) => res.json(deleteProductTags))
+  .catch((err) => {
+    res.status(400).json(err);
+  });
+    // delete one product by its `id` value
 });
 
 module.exports = router;
